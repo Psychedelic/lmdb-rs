@@ -8,7 +8,6 @@ use std::{
 };
 
 use libc::{
-    c_uint,
     c_void,
     size_t,
     EINVAL,
@@ -24,6 +23,8 @@ use ffi;
 use flags::WriteFlags;
 use transaction::Transaction;
 
+type CursorOp = ffi::MDB_cursor_op;
+
 /// An LMDB cursor.
 pub trait Cursor<'txn> {
     /// Returns a raw pointer to the underlying LMDB cursor.
@@ -34,7 +35,7 @@ pub trait Cursor<'txn> {
 
     /// Retrieves a key/data pair from the cursor. Depending on the cursor op,
     /// the current key may be returned.
-    fn get(&self, key: Option<&[u8]>, data: Option<&[u8]>, op: c_uint) -> Result<(Option<&'txn [u8]>, &'txn [u8])> {
+    fn get(&self, key: Option<&[u8]>, data: Option<&[u8]>, op: CursorOp) -> Result<(Option<&'txn [u8]>, &'txn [u8])> {
         unsafe {
             let mut key_val = slice_to_val(key);
             let mut data_val = slice_to_val(data);
@@ -278,10 +279,10 @@ pub enum Iter<'txn> {
         cursor: *mut ffi::MDB_cursor,
 
         /// The first operation to perform when the consumer calls Iter.next().
-        op: c_uint,
+        op: CursorOp,
 
         /// The next and subsequent operations to perform.
-        next_op: c_uint,
+        next_op: CursorOp,
 
         /// A marker to ensure the iterator doesn't outlive the transaction.
         _marker: PhantomData<fn(&'txn ())>,
@@ -290,7 +291,7 @@ pub enum Iter<'txn> {
 
 impl<'txn> Iter<'txn> {
     /// Creates a new iterator backed by the given cursor.
-    fn new<'t>(cursor: *mut ffi::MDB_cursor, op: c_uint, next_op: c_uint) -> Iter<'t> {
+    fn new<'t>(cursor: *mut ffi::MDB_cursor, op: CursorOp, next_op: CursorOp) -> Iter<'t> {
         Iter::Ok {
             cursor,
             op,
@@ -362,7 +363,7 @@ pub enum IterDup<'txn> {
         cursor: *mut ffi::MDB_cursor,
 
         /// The first operation to perform when the consumer calls Iter.next().
-        op: c_uint,
+        op: CursorOp,
 
         /// A marker to ensure the iterator doesn't outlive the transaction.
         _marker: PhantomData<fn(&'txn ())>,
@@ -371,7 +372,7 @@ pub enum IterDup<'txn> {
 
 impl<'txn> IterDup<'txn> {
     /// Creates a new iterator backed by the given cursor.
-    fn new<'t>(cursor: *mut ffi::MDB_cursor, op: c_uint) -> IterDup<'t> {
+    fn new<'t>(cursor: *mut ffi::MDB_cursor, op: CursorOp) -> IterDup<'t> {
         IterDup::Ok {
             cursor,
             op,
